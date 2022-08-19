@@ -6,14 +6,13 @@ buildscript {
 
 ext.versions = [
 	flink		: '1.7.1',
-	slf4j		: '1.7.25',
-	logback	: '1.2.3',
-	junit		: '4.12',
+	slf4j		: '1.7.36',
+	logback	: '1.2.11',
+	junit		: '4.13.2',
 ]
 
 subprojects {
 	apply plugin: 'java'
-	apply plugin: 'maven'
 	apply plugin: 'signing'
 
 	group = 'com.king.bravo'
@@ -41,10 +40,10 @@ subprojects {
 
 	dependencies {
 
-		testCompile group: 'junit', name: 'junit', version: versions.junit
-		testRuntime group: 'ch.qos.logback', name: 'logback-classic', version: versions.logback
-		testRuntime group: 'org.slf4j', name: 'log4j-over-slf4j', version: versions.slf4j
-		testRuntime group: 'org.slf4j', name: 'jcl-over-slf4j', version: versions.slf4j
+		testImplementation group: 'junit', name: 'junit', version: versions.junit
+		testImplementation group: 'ch.qos.logback', name: 'logback-classic', version: versions.logback
+		testImplementation group: 'org.slf4j', name: 'log4j-over-slf4j', version: versions.slf4j
+		testImplementation group: 'org.slf4j', name: 'jcl-over-slf4j', version: versions.slf4j
 	}
 
 	artifacts {
@@ -59,53 +58,8 @@ subprojects {
       onlyIf {project.hasProperty('release') && release}
 	}
 
-	uploadArchives {
-	  repositories {
-	    mavenDeployer {
-
-				pom.project {
-					name 'bravo'
-					packaging 'jar'
-					description 'Utilities for processing Flink checkpoints/savepoints'
-					url 'https://github.com/king/bravo'
-
-					scm {
-						connection 'https://github.com/king/bravo.git'
-						developerConnection 'https://github.com/king/bravo.git'
-						url 'https://github.com/king/bravo'
-					}
-
-					licenses {
-						license {
-							name 'The Apache License, Version 2.0'
-							url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
-						}
-					}
-
-					developers {
-						developer {
-							id 'gyula'
-							name 'Gyula Fora'
-							email 'gyula.fora@king.com'
-						}
-					}
-				}
-
-	      beforeDeployment { MavenDeployment deployment -> signing.signPom(deployment) }
-
-	      repository(url: "https://oss.sonatype.org/service/local/staging/deploy/maven2/") {
-	        authentication(userName: project.findProperty('nexusUsername') ?: '', password: project.findProperty('nexusPassword') ?: '')
-	      }
-
-	      snapshotRepository(url: "https://oss.sonatype.org/content/repositories/snapshots/") {
-	        authentication(userName: project.findProperty('nexusUsername') ?: '', password: project.findProperty('nexusPassword') ?: '')
-	      }
-	    }
-      }
-   }
-
 }
 
 wrapper {
-	gradleVersion = 4.7
+	gradleVersion = 7.5
 }
