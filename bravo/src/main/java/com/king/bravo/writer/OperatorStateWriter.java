@@ -38,7 +38,7 @@ import org.apache.flink.core.memory.DataOutputViewStreamWrapper;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 import org.apache.flink.runtime.checkpoint.OperatorSubtaskState;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
-import org.apache.flink.runtime.checkpoint.savepoint.Savepoint;
+import org.apache.flink.runtime.checkpoint.metadata.CheckpointMetadata;
 import org.apache.flink.runtime.state.CheckpointStreamFactory;
 import org.apache.flink.runtime.state.CheckpointedStateScope;
 import org.apache.flink.runtime.state.KeyedBackendSerializationProxy;
@@ -81,7 +81,7 @@ public class OperatorStateWriter {
 
 	private TypeSerializer<?> keySerializer = null;
 
-	public OperatorStateWriter(Savepoint sp, String uid, Path newCheckpointBasePath) {
+	public OperatorStateWriter(CheckpointMetadata sp, String uid, Path newCheckpointBasePath) {
 		this(sp.getCheckpointId(), StateMetadataUtils.getOperatorState(sp, uid), newCheckpointBasePath);
 	}
 
@@ -154,8 +154,10 @@ public class OperatorStateWriter {
 
 	@SuppressWarnings({ "rawtypes", "unchecked" })
 	private <T> TypeSerializer<T> getKeySerializer() {
-		return proxy != null ? (TypeSerializer) proxy.getKeySerializerConfigSnapshot().restoreSerializer()
-				: (TypeSerializer) keySerializer;
+//		return proxy != null ? (TypeSerializer) proxy.getKeySerializerConfigSnapshot().restoreSerializer()
+//				: (TypeSerializer) keySerializer;
+
+		return null;
 	}
 
 	/**
@@ -267,16 +269,16 @@ public class OperatorStateWriter {
 			StateObjectCollection<OperatorStateHandle> opHandle = transformSubtaskOpState(outDir, subtaskId,
 					subtaskState.getManagedOperatorState());
 
-			newOperatorState.putState(subtaskId,
-					new OperatorSubtaskState(
-							opHandle,
-							subtaskState.getRawOperatorState(),
-							keepBaseKeyedStates ? subtaskState.getManagedKeyedState()
-									: new StateObjectCollection<>(
-											newKeyedHandle != null
-													? Lists.newArrayList(newKeyedHandle)
-													: Collections.emptyList()),
-							subtaskState.getRawKeyedState()));
+//			newOperatorState.putState(subtaskId,
+//					new OperatorSubtaskState(
+//							opHandle,
+//							subtaskState.getRawOperatorState(),
+//							keepBaseKeyedStates ? subtaskState.getManagedKeyedState()
+//									: new StateObjectCollection<>(
+//											newKeyedHandle != null
+//													? Lists.newArrayList(newKeyedHandle)
+//													: Collections.emptyList()),
+//							subtaskState.getRawKeyedState()));
 		});
 
 		return newOperatorState;

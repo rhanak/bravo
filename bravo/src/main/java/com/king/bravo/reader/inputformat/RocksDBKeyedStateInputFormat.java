@@ -34,6 +34,7 @@ import org.apache.flink.core.io.InputSplitAssigner;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 import org.apache.flink.runtime.io.disk.iomanager.IOManagerAsync;
 import org.apache.flink.runtime.state.IncrementalKeyedStateHandle;
+import org.apache.flink.runtime.state.IncrementalRemoteKeyedStateHandle;
 import org.apache.flink.runtime.state.KeyGroupsStateHandle;
 import org.apache.flink.util.IOUtils;
 
@@ -74,13 +75,13 @@ public class RocksDBKeyedStateInputFormat extends RichInputFormat<KeyedStateRow,
 				.getManagedKeyedState()
 				.stream()
 				.map(keyedStateHandle -> {
-					if (keyedStateHandle instanceof IncrementalKeyedStateHandle) {
+					if (keyedStateHandle instanceof IncrementalRemoteKeyedStateHandle) {
 						File localDir = new File(spillingDirectoriesPaths[0], "rocksdb_" + UUID.randomUUID());
 						if (!localDir.mkdirs()) {
 							throw new RuntimeException("Could not create " + localDir);
 						}
-						RocksDBCheckpointIterator iterator = new RocksDBCheckpointIterator(
-								(IncrementalKeyedStateHandle) keyedStateHandle,
+						RocksDBCheckpointIterator iterator = new RocksDBCheckpointIterator(operatorState,
+								(IncrementalRemoteKeyedStateHandle) keyedStateHandle,
 								stateFilter, localDir.getAbsolutePath());
 						iterators.add(iterator);
 						return iterator;

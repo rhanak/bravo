@@ -17,6 +17,7 @@
  */
 package com.king.bravo.reader;
 
+import com.google.common.collect.Maps;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,19 +30,19 @@ import org.apache.flink.api.common.ExecutionConfig;
 import org.apache.flink.api.common.functions.FilterFunction;
 import org.apache.flink.api.common.state.ListState;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
+import org.apache.flink.api.common.typeutils.TypeSerializerSnapshotSerializationUtil;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.tuple.Tuple1;
 import org.apache.flink.api.java.typeutils.runtime.TupleSerializerBase;
+import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.runtime.checkpoint.OperatorState;
 import org.apache.flink.runtime.checkpoint.StateObjectCollection;
-import org.apache.flink.runtime.checkpoint.savepoint.Savepoint;
+import org.apache.flink.runtime.checkpoint.metadata.CheckpointMetadata;
 import org.apache.flink.runtime.state.DefaultOperatorStateBackend;
 import org.apache.flink.runtime.state.KeyedBackendSerializationProxy;
 import org.apache.flink.runtime.state.OperatorStateBackend;
 import org.apache.flink.runtime.state.OperatorStateHandle;
-import org.apache.flink.shaded.curator.org.apache.curator.shaded.com.google.common.collect.Maps;
-
 import com.king.bravo.reader.inputformat.RocksDBKeyedStateInputFormat;
 import com.king.bravo.types.KeyedStateRow;
 import com.king.bravo.utils.StateMetadataUtils;
@@ -69,11 +70,11 @@ public class OperatorStateReader {
 		this.keyedStateFilter = keyedStateFilter;
 	}
 
-	public OperatorStateReader(ExecutionEnvironment env, Savepoint sp, String uid) {
+	public OperatorStateReader(ExecutionEnvironment env, CheckpointMetadata sp, String uid) {
 		this(env, sp, uid, s -> true);
 	}
 
-	public OperatorStateReader(ExecutionEnvironment env, Savepoint sp, String uid, Collection<String> stateNames) {
+	public OperatorStateReader(ExecutionEnvironment env, CheckpointMetadata sp, String uid, Collection<String> stateNames) {
 		this(env, sp, uid, new FilterFunction<String>() {
 			private static final long serialVersionUID = 1L;
 			HashSet<String> filtered = new HashSet<>(stateNames);
@@ -85,7 +86,7 @@ public class OperatorStateReader {
 		});
 	}
 
-	public OperatorStateReader(ExecutionEnvironment env, Savepoint sp, String uid,
+	public OperatorStateReader(ExecutionEnvironment env, CheckpointMetadata sp, String uid,
 			FilterFunction<String> keyedStateFilter) {
 		this(env, StateMetadataUtils.getOperatorState(sp, uid), keyedStateFilter);
 	}
@@ -108,7 +109,7 @@ public class OperatorStateReader {
 	}
 
 	private TypeSerializer<?> getKeySerializer(KeyedBackendSerializationProxy<?> proxy) {
-		TypeSerializer<?> keySerializer = proxy.getKeySerializerConfigSnapshot().restoreSerializer();
+		TypeSerializer<?> keySerializer = proxy.getKeySerializerSnapshot().restoreSerializer();
 		if (keySerializer instanceof TupleSerializerBase) {
 			TupleSerializerBase ts = (TupleSerializerBase) keySerializer;
 			if (ts.getTupleClass().equals(Tuple1.class)) {
@@ -170,18 +171,19 @@ public class OperatorStateReader {
 	 * operator subtask
 	 */
 	public List<Serializable> getSerializableListState(int subtask) throws Exception {
-		OperatorStateBackend backend = createOperatorStateBackendFromSnapshot(subtask);
-		@SuppressWarnings("deprecation")
-		ListState<Serializable> listState = backend
-				.getSerializableListState(DefaultOperatorStateBackend.DEFAULT_OPERATOR_STATE_NAME);
-
-		List<Serializable> list = new ArrayList<>();
-
-		for (Serializable serializable : listState.get()) {
-			list.add(serializable);
-		}
-
-		return list;
+//		OperatorStateBackend backend = createOperatorStateBackendFromSnapshot(subtask);
+//		@SuppressWarnings("deprecation")
+//		ListState<Serializable> listState = backend
+//				.getListState(DefaultOperatorStateBackend.DEFAULT_OPERATOR_STATE_NAME);
+//
+//		List<Serializable> list = new ArrayList<>();
+//
+//		for (Serializable serializable : listState.get()) {
+//			list.add(serializable);
+//		}
+//
+//		return list;
+		return null;
 	}
 
 	/**
@@ -203,10 +205,11 @@ public class OperatorStateReader {
 			StateObjectCollection<OperatorStateHandle> managedOpState)
 			throws Exception {
 
-		DefaultOperatorStateBackend stateBackend = new DefaultOperatorStateBackend(
-				OperatorStateReader.class.getClassLoader(), new ExecutionConfig(), false);
-
-		stateBackend.restore(managedOpState);
-		return stateBackend;
+//		DefaultOperatorStateBackend stateBackend = new DefaultOperatorStateBackend(
+//				OperatorStateReader.class.getClassLoader(), new ExecutionConfig(), false);
+//
+//		stateBackend.restore(managedOpState);
+//		return stateBackend;
+		return null;
 	}
 }

@@ -25,18 +25,17 @@ import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.memory.DataInputViewStreamWrapper;
 import org.apache.flink.runtime.checkpoint.Checkpoints;
 import org.apache.flink.runtime.checkpoint.OperatorState;
-import org.apache.flink.runtime.checkpoint.savepoint.Savepoint;
-import org.apache.flink.runtime.checkpoint.savepoint.SavepointV2;
+import org.apache.flink.runtime.checkpoint.metadata.CheckpointMetadata;
 import org.apache.flink.runtime.jobgraph.OperatorID;
-import org.apache.flink.runtime.state.CompletedCheckpointStorageLocation;
 import org.apache.flink.runtime.state.IncrementalKeyedStateHandle;
+import org.apache.flink.runtime.state.IncrementalRemoteKeyedStateHandle;
 import org.apache.flink.runtime.state.KeyedBackendSerializationProxy;
 import org.apache.flink.runtime.state.KeyedStateHandle;
 import org.apache.flink.runtime.state.SnappyStreamCompressionDecorator;
 import org.apache.flink.runtime.state.StreamCompressionDecorator;
 import org.apache.flink.runtime.state.StreamStateHandle;
 import org.apache.flink.runtime.state.UncompressedStreamCompressionDecorator;
-import org.apache.flink.runtime.state.filesystem.AbstractFsCheckpointStorage;
+import org.apache.flink.runtime.state.filesystem.AbstractFsCheckpointStorageAccess;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot.CommonSerializerKeys;
 
@@ -50,34 +49,49 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import org.apache.flink.state.api.runtime.SavepointLoader;
 
 public class StateMetadataUtils {
 
 	/**
 	 * Load the Savepoint metadata object from the given path
 	 */
-	public static Savepoint loadSavepoint(String checkpointPointer) throws IOException {
-		try {
-			Method resolveCheckpointPointer = AbstractFsCheckpointStorage.class.getDeclaredMethod(
-					"resolveCheckpointPointer",
-					String.class);
-			resolveCheckpointPointer.setAccessible(true);
-			CompletedCheckpointStorageLocation loc = (CompletedCheckpointStorageLocation) resolveCheckpointPointer
-					.invoke(null, checkpointPointer);
+//	public static Savepoint loadSavepoint(String checkpointPointer) throws IOException {
+//		try {
+//			Method resolveCheckpointPointer = AbstractFsCheckpointStorage.class.getDeclaredMethod(
+//					"resolveCheckpointPointer",
+//					String.class);
+//			resolveCheckpointPointer.setAccessible(true);
+//			CompletedCheckpointStorageLocation loc = (CompletedCheckpointStorageLocation) resolveCheckpointPointer
+//					.invoke(null, checkpointPointer);
+//
+//			return Checkpoints.loadCheckpointMetadata(new DataInputStream(loc.getMetadataHandle().openInputStream()),
+//					StateMetadataUtils.class.getClassLoader());
+//		} catch (Exception e) {
+//			throw new RuntimeException(e);
+//		}
+//
+//	}
 
-			return Checkpoints.loadCheckpointMetadata(new DataInputStream(loc.getMetadataHandle().openInputStream()),
-					StateMetadataUtils.class.getClassLoader());
+	/**
+	 * Load the Savepoint metadata object from the given path
+	 */
+	public static CheckpointMetadata loadSavepoint(String checkpointPointer) throws IOException {
+		try {
+
+			CheckpointMetadata metadata = SavepointLoader.loadSavepointMetadata(checkpointPointer);
+			return metadata;
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		}
 
 	}
 
-	public static OperatorState getOperatorState(Savepoint savepoint, String uid) {
+	public static OperatorState getOperatorState(CheckpointMetadata savepoint, String uid) {
 		return getOperatorState(savepoint, Identifiers.operatorId(uid));
 	}
 
-	public static OperatorState getOperatorState(Savepoint savepoint, OperatorID opId) {
+	public static OperatorState getOperatorState(CheckpointMetadata savepoint, OperatorID opId) {
 		return savepoint
 				.getOperatorStates()
 				.stream()
@@ -91,51 +105,64 @@ public class StateMetadataUtils {
 	}
 
 	/**
-	 * Create a new {@link Savepoint} by replacing certain
-	 * {@link OperatorState}s of an old {@link Savepoint}
-	 * 
+	 * Create a new {@link CheckpointMetadata} by replacing certain
+	 * {@link OperatorState}s of an old {@link CheckpointMetadata}
+	 *
 	 * @param oldSavepoint
-	 *            {@link Savepoint} to base the new state on
+	 *            {@link CheckpointMetadata} to base the new state on
 	 * @param statesToReplace
 	 *            States that will be replaced, all else will be kept
-	 * @return A new valid {@link Savepoint} metadata object.
+	 * @return A new valid {@link CheckpointMetadata} metadata object.
 	 */
-	public static Savepoint createNewSavepoint(Savepoint oldSavepoint, OperatorState... statesToReplace) {
-		return createNewSavepoint(oldSavepoint, Arrays.asList(statesToReplace));
+	public static CheckpointMetadata createNewSavepoint(CheckpointMetadata oldSavepoint, OperatorState... statesToReplace) {
+		return createNewCheckpointMetadata(oldSavepoint, Arrays.asList(statesToReplace));
 	}
 
 	/**
-	 * Create a new {@link Savepoint} by replacing certain
-	 * {@link OperatorState}s of an old {@link Savepoint}
-	 * 
-	 * @param oldSavepoint
-	 *            {@link Savepoint} to base the new state on
+	 * Create a new {@link CheckpointMetadata} by replacing certain
+	 * {@link OperatorState}s of an old {@link CheckpointMetadata}
+	 *
+	 * @param oldCheckpointMetadata
+	 *            {@link CheckpointMetadata} to base the new state on
 	 * @param statesToReplace
 	 *            States that will be replaced, all else will be kept
-	 * @return A new valid {@link Savepoint} metadata object.
+	 * @return A new valid {@link CheckpointMetadata} metadata object.
 	 */
-	public static Savepoint createNewSavepoint(Savepoint oldSavepoint, Collection<OperatorState> statesToReplace) {
+	public static CheckpointMetadata createNewCheckpointMetadata(CheckpointMetadata oldCheckpointMetadata, Collection<OperatorState> statesToReplace) {
 
-		Map<OperatorID, OperatorState> newStates = oldSavepoint.getOperatorStates().stream()
+		Map<OperatorID, OperatorState> newStates = oldCheckpointMetadata.getOperatorStates().stream()
 				.collect(Collectors.toMap(OperatorState::getOperatorID, o -> o));
 
 		statesToReplace.forEach(os -> newStates.put(os.getOperatorID(), os));
 
-		return new SavepointV2(oldSavepoint.getCheckpointId(), newStates.values(), oldSavepoint.getMasterStates());
+		return new CheckpointMetadata(oldCheckpointMetadata.getCheckpointId(), newStates.values(), oldCheckpointMetadata.getMasterStates());
 	}
 
 	public static Optional<KeyedBackendSerializationProxy<?>> getKeyedBackendSerializationProxy(OperatorState opState) {
 		try {
 			KeyedStateHandle firstHandle = opState.getStates().iterator().next().getManagedKeyedState().iterator()
 					.next();
-			if (firstHandle instanceof IncrementalKeyedStateHandle) {
+			if (firstHandle instanceof IncrementalRemoteKeyedStateHandle) {
 				return Optional.of(getKeyedBackendSerializationProxy(
-						((IncrementalKeyedStateHandle) firstHandle).getMetaStateHandle()));
+						((IncrementalRemoteKeyedStateHandle) firstHandle).getMetaStateHandle()));
 			} else {
 				return Optional.of(getKeyedBackendSerializationProxy((StreamStateHandle) firstHandle));
 			}
 		} catch (Exception e) {
 			return Optional.empty();
+		}
+	}
+
+	public static KeyedBackendSerializationProxy<?> getKeyedBackendSerializationProxy(
+		StreamStateHandle streamStateHandle) {
+		KeyedBackendSerializationProxy<Integer> serializationProxy = new KeyedBackendSerializationProxy<>(
+			StateMetadataUtils.class.getClassLoader());
+		try (FSDataInputStream is = streamStateHandle.openInputStream()) {
+			DataInputViewStreamWrapper iw = new DataInputViewStreamWrapper(is);
+			serializationProxy.read(iw);
+			return serializationProxy;
+		} catch (IOException e) {
+			throw new RuntimeException(e);
 		}
 	}
 
@@ -173,21 +200,8 @@ public class StateMetadataUtils {
 		return stateIdMapping;
 	}
 
-	public static KeyedBackendSerializationProxy<?> getKeyedBackendSerializationProxy(
-			StreamStateHandle streamStateHandle) {
-		KeyedBackendSerializationProxy<Integer> serializationProxy = new KeyedBackendSerializationProxy<>(
-				StateMetadataUtils.class.getClassLoader());
-		try (FSDataInputStream is = streamStateHandle.openInputStream()) {
-			DataInputViewStreamWrapper iw = new DataInputViewStreamWrapper(is);
-			serializationProxy.read(iw);
-			return serializationProxy;
-		} catch (IOException e) {
-			throw new RuntimeException(e);
-		}
-	}
-
-	public static Path writeSavepointMetadata(Path newCheckpointBasePath, Savepoint savepoint) throws IOException {
-		Path p = new Path(newCheckpointBasePath, AbstractFsCheckpointStorage.METADATA_FILE_NAME);
+	public static Path writeCheckpointMetadataMetadata(Path newCheckpointBasePath, CheckpointMetadata savepoint) throws IOException {
+		Path p = new Path(newCheckpointBasePath, AbstractFsCheckpointStorageAccess.METADATA_FILE_NAME);
 		Checkpoints.storeCheckpointMetadata(savepoint,
 				newCheckpointBasePath.getFileSystem().create(p, WriteMode.NO_OVERWRITE));
 		return p;
