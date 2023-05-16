@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.BiConsumer;
 
+import com.google.common.collect.Maps;
 import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.common.state.StateDescriptor;
 import org.apache.flink.api.common.typeutils.TypeSerializer;
@@ -49,7 +50,6 @@ import org.apache.flink.runtime.state.RegisteredKeyValueStateBackendMetaInfo;
 import org.apache.flink.runtime.state.VoidNamespaceSerializer;
 import org.apache.flink.runtime.state.filesystem.FileBasedStateOutputStream;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
-import org.apache.flink.shaded.guava18.com.google.common.collect.Maps;
 
 import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Lists;

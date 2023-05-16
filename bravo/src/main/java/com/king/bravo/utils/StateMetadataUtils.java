@@ -38,6 +38,7 @@ import org.apache.flink.runtime.state.UncompressedStreamCompressionDecorator;
 import org.apache.flink.runtime.state.filesystem.AbstractFsCheckpointStorageAccess;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot;
 import org.apache.flink.runtime.state.metainfo.StateMetaInfoSnapshot.CommonSerializerKeys;
+import org.apache.flink.state.api.runtime.SavepointLoader;
 
 import java.io.DataInputStream;
 import java.io.IOException;
@@ -49,7 +50,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
-import org.apache.flink.state.api.runtime.SavepointLoader;
 
 public class StateMetadataUtils {
 
@@ -149,6 +149,8 @@ public class StateMetadataUtils {
 				return Optional.of(getKeyedBackendSerializationProxy((StreamStateHandle) firstHandle));
 			}
 		} catch (Exception e) {
+			// Todo introduce logging
+			System.err.println(e);
 			return Optional.empty();
 		}
 	}

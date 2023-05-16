@@ -2,6 +2,9 @@
 dependencies {
   implementation group: 'com.google.guava', name: 'guava', version: '31.1-jre'
   implementation group: 'org.apache.flink', name: 'flink-streaming-java_2.11', version: versions.flink
+  implementation group: 'org.apache.flink', name: 'flink-state-processor-api_2.12', version: versions.flink
   implementation group: 'org.apache.flink', name: 'flink-statebackend-rocksdb_2.11', version: versions.flink
+
+
   testImplementation (project(':bravo-test-utils'))
 }
